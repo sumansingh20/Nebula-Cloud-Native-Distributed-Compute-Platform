@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: master-secret-config
+type: Opaque
+data:
+  postgres-password: cG9zdGdyZXMK
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nebula-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nebula-master
+  template:
+    metadata:
+      labels:
+        app: nebula-master
+    spec:
+      containers:
+        - name: app
+          image: nebula-master:1.0.3
+          ports:
+            - containerPort: 8080
+          env:
+            - name: POSTGRES_URL
+              value: postgres.default:5432
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: master-secret-config
+                  key: postgres-password
+          imagePullPolicy: IfNotPresent
+      nodeSelector:
+        role: master-node
+---
+# Expose Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: nebula-master
+spec:
+  selector:
+    app: nebula-master
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: LoadBalancer
